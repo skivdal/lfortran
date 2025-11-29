@@ -243,7 +243,9 @@ LFORTRAN_API void _lfortran_inquire(const fchar* f_name_data, int64_t f_name_len
                                     bool *opened, int32_t *size, int32_t *pos,
                                     char *write, int64_t write_len,
                                     char *read, int64_t read_len,
-                                    char *readwrite, int64_t readwrite_len);
+                                    char *readwrite, int64_t readwrite_len,
+                                    char *access, int64_t access_len,
+                                    char *name, int64_t name_len);
 LFORTRAN_API void _lfortran_formatted_read(int32_t unit_num, int32_t* iostat, int32_t* chunk, fchar* advance, int64_t advance_length, fchar* fmt, int64_t fmt_len, int32_t no_of_args, ...);
 LFORTRAN_API char* _lpython_read(int64_t fd, int64_t n);
 LFORTRAN_API void _lfortran_read_int16(int16_t *p, int32_t unit_num);
@@ -286,7 +288,7 @@ LFORTRAN_API void _lpython_call_initial_functions(int32_t argc_1, char *argv_1[]
 LFORTRAN_API void print_stacktrace_addresses(char *filename, bool use_colors);
 LFORTRAN_API char *_lfortran_get_env_variable(char *name);
 LFORTRAN_API void _lfortran_get_environment_variable(fchar *name, int32_t name_len, char* receiver);
-LFORTRAN_API int _lfortran_exec_command(char *cmd);
+LFORTRAN_API int _lfortran_exec_command(fchar *cmd, int64_t len);
 LFORTRAN_API void _lfortran_get_command_command(char* receiver);
 LFORTRAN_API int32_t _lfortran_get_command_length();
 

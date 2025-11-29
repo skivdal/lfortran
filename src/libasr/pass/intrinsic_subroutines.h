@@ -1068,12 +1068,19 @@ namespace ExecuteCommandLine {
             fill_func_arg_sub("cmdmsg", arg_types[optional_arg_index], InOut);
         }
 
-            SymbolTable *fn_symtab_1 = al.make_new<SymbolTable>(fn_symtab);
-            Vec<ASR::expr_t*> args_1; args_1.reserve(al, 1);
-            ASR::expr_t *arg = b.Variable(fn_symtab_1, "n",
+        SymbolTable *fn_symtab_1 = al.make_new<SymbolTable>(fn_symtab);
+        Vec<ASR::expr_t*> args_1; args_1.reserve(al, 1);
+
+        {
+            ASR::expr_t *str_arg = b.Variable(fn_symtab_1, "m",
                 b.UnboundedArray(b.String(b.i32(1), ASR::ExpressionLength, ASR::CChar), 1),
                 ASR::intentType::InOut, nullptr, ASR::abiType::BindC, true);
-            args_1.push_back(al, arg);
+            args_1.push_back(al, str_arg);
+
+            ASR::expr_t *len_arg = b.Variable(fn_symtab_1, "n", ASRUtils::TYPE(ASR::make_Integer_t(al, loc, 4)),
+                    ASR::intentType::InOut, nullptr, ASR::abiType::BindC, true);
+            args_1.push_back(al, len_arg);
+        }
 
         ASR::expr_t *return_var_1 = b.Variable(fn_symtab_1, c_func_name,
         ret_type, ASRUtils::intent_return_var, nullptr, ASR::abiType::BindC, false);
@@ -1086,7 +1093,13 @@ namespace ExecuteCommandLine {
         dep.push_back(al, s2c(al, c_func_name));
 
         Vec<ASR::expr_t*> call_args; call_args.reserve(al, 1);
-        call_args.push_back(al, create_string_physical_cast(al, args[0], ASR::CChar));
+
+        // Push the arguments to call_args vector, the string and its length
+        {
+            call_args.push_back(al, create_string_physical_cast(al, args[0], ASR::CChar));
+            call_args.push_back(al, b.StringLen(args[0]));
+        }
+
         optional_arg_index = 2;
         if (overload_id & WAIT_BIT) {
             // TODO: handle this
@@ -1095,6 +1108,19 @@ namespace ExecuteCommandLine {
         if (overload_id & EXITSTAT_BIT) {
             body.push_back(al, b.Assignment(args[optional_arg_index], exit_status_local));
             optional_arg_index++;
+        }
+
+        std::vector<ASR::stmt_t*> failure_handlers;
+        if (overload_id & CMDSTAT_BIT) {
+            ASR::expr_t *cmdstat_arg = args[optional_arg_index];
+            ASR::ttype_t *cmdstat_type = ASRUtils::expr_type(cmdstat_arg);
+            body.push_back(al, b.Assignment(cmdstat_arg, b.i_t(0, cmdstat_type)));
+            failure_handlers.push_back(b.Assignment(cmdstat_arg, b.i_t(1, cmdstat_type)));
+            optional_arg_index++;
+        }
+        if (!failure_handlers.empty()) {
+            ASR::expr_t *system_failed = b.Eq(exit_status_local, b.i_t(-1, ret_type));
+            body.push_back(al, b.If(system_failed, failure_handlers, {}));
         }
         ASR::symbol_t *new_symbol = make_ASR_Function_t(fn_name, fn_symtab, dep, args,
             body, nullptr, ASR::abiType::Source, ASR::deftypeType::Implementation, nullptr);

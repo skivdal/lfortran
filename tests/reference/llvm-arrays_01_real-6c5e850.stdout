@@ -764,6 +764,9 @@ ifcont125:                                        ; preds = %else124, %then123
   br label %return
 
 return:                                           ; preds = %ifcont125
+  br label %FINALIZE_SYMTABLE_arrays_01_real
+
+FINALIZE_SYMTABLE_arrays_01_real:                 ; preds = %return
   ret i32 0
 }
 

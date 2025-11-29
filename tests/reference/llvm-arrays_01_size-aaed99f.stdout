@@ -582,6 +582,9 @@ ifcont94:                                         ; preds = %else93, %then92
   br label %return
 
 return:                                           ; preds = %ifcont94
+  br label %FINALIZE_SYMTABLE_arrays_01
+
+FINALIZE_SYMTABLE_arrays_01:                      ; preds = %return
   ret i32 0
 }
 

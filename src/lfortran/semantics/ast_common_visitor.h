@@ -9710,7 +9710,8 @@ public:
         for( size_t i = 0; i < x.n_object_list; i++ ) {
             this->visit_expr(*(x.m_object_list[i]));
             ASR::expr_t *expr = ASRUtils::EXPR(tmp);
-            ASR::ttype_t* type_ = ASRUtils::expr_type(expr);
+            ASR::ttype_t* type_ = ASRUtils::type_get_past_allocatable(
+                ASRUtils::expr_type(expr));
             if( type == nullptr ) {
                 type = type_;
             } else {
@@ -9927,7 +9928,8 @@ public:
         for( size_t i = 0; i < x.n_values; i++ ) {
             this->visit_expr(*(x.m_values[i]));
             ASR::expr_t *expr = ASRUtils::EXPR(tmp);
-            ASR::ttype_t* type_ = ASRUtils::expr_type(expr);
+            ASR::ttype_t* type_ = ASRUtils::type_get_past_allocatable(
+                ASRUtils::expr_type(expr));
             if( type == nullptr ) {
                 type = type_;
             } else {
@@ -10397,6 +10399,15 @@ public:
                         }
                     }
                     if( !function_found ) {
+                        // First check if default structConstructor is there
+                        ASR::symbol_t* struct_sym = ASRUtils::symbol_get_past_external(
+                            current_scope->resolve_symbol(var_name));
+                        if (struct_sym &&
+                                ASR::is_a<ASR::Struct_t>(*struct_sym)) {
+                            tmp = create_DerivedTypeConstructor(x.base.base.loc, x.m_args, x.n_args,
+                                                    x.m_keywords, x.n_keywords, struct_sym);
+                            return;
+                        }
                         bool is_function = true;
                         v = intrinsic_as_node(x, is_function);
                         if( !is_function ) {
@@ -11219,13 +11230,12 @@ public:
         for (size_t i = 0; i < gen_proc->n_procs; ++i) {
             ASR::symbol_t* proc;
             if (ASR::is_a<ASR::StructMethodDeclaration_t>(*gen_proc->m_procs[i])) {
-                proc = ASRUtils::symbol_get_past_external(
-                    ASR::down_cast<ASR::StructMethodDeclaration_t>(gen_proc->m_procs[i])->m_proc);
+                proc = ASR::down_cast<ASR::StructMethodDeclaration_t>(gen_proc->m_procs[i])->m_proc;
             } else {
                 proc = gen_proc->m_procs[i];
             }
 
-            if (!ASR::is_a<ASR::Function_t>(*proc)) {
+            if (!ASR::is_a<ASR::Function_t>(*ASRUtils::symbol_get_past_external(proc))) {
                 diag.add(Diagnostic("Only functions are allowed in defined binary operators",
                                     Level::Error,
                                     Stage::Semantic,
@@ -11233,7 +11243,7 @@ public:
                 throw SemanticAbort();
             }
 
-            ASR::Function_t* func = ASR::down_cast<ASR::Function_t>(proc);
+            ASR::Function_t* func = ASR::down_cast<ASR::Function_t>(ASRUtils::symbol_get_past_external(proc));
             if ((is_binary && func->n_args != 2) || (!is_binary && func->n_args != 1))
                 continue;
             bool args_match = ASRUtils::check_equal_type(ASRUtils::expr_type(func->m_args[0]), left_type, func->m_args[0], first_operand);
@@ -11261,6 +11271,20 @@ public:
             }
 
             ASR::symbol_t* a_name = current_scope->resolve_symbol(matched_func_name);
+            if (!a_name && first_struct != nullptr && proc) {
+                // Create an ExternalSymbol in the current scope to reference the
+                // type-bound procedure so ASR verification passes.
+                ASR::symbol_t* proc_owner = ASRUtils::get_asr_owner(proc);
+                std::string module_name = "";
+                if (proc_owner) {
+                    module_name = ASRUtils::symbol_name(proc_owner);
+                }
+                a_name = ASR::down_cast<ASR::symbol_t>(ASR::make_ExternalSymbol_t(
+                    al, proc->base.loc, current_scope,
+                    s2c(al, matched_func_name), proc, s2c(al, module_name),
+                    nullptr, 0, s2c(al, std::string(func->m_name)), ASR::accessType::Public));
+                current_scope->add_symbol(matched_func_name, a_name);
+            }
             if (!a_name) {
                 diag.add(Diagnostic("Unable to resolve matched function: `" + matched_func_name
                                         + "` for defined binary operation",
@@ -11287,10 +11311,10 @@ public:
                 // return_type = ASRUtils::fix_scoped_type(al, type, current_scope);
             }
 
-            if (op_sym && ASRUtils::symbol_parent_symtab(op_sym)->get_counter()
+            if (a_name && ASRUtils::symbol_parent_symtab(a_name)->get_counter()
                         != current_scope->get_counter()) {
                 ADD_ASR_DEPENDENCIES_WITH_NAME(current_scope,
-                                                op_sym,
+                                                a_name,
                                                 current_function_dependencies,
                                                 s2c(al, matched_func_name));
             }

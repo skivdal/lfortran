@@ -872,6 +872,9 @@ ifcont140:                                        ; preds = %else139, %then138
   br label %return
 
 return:                                           ; preds = %ifcont140
+  br label %FINALIZE_SYMTABLE_arrays_01_logical
+
+FINALIZE_SYMTABLE_arrays_01_logical:              ; preds = %return
   ret i32 0
 }
 

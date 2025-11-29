@@ -54,6 +54,9 @@ define void @__module_complex_module_integer_add_subrout(%complextype* %this, i3
   br label %return
 
 return:                                           ; preds = %.entry
+  br label %FINALIZE_SYMTABLE_integer_add_subrout
+
+FINALIZE_SYMTABLE_integer_add_subrout:            ; preds = %return
   ret void
 }
 
@@ -78,6 +81,9 @@ define void @__module_complex_module_real_add_subrout(%complextype* %this, float
   br label %return
 
 return:                                           ; preds = %.entry
+  br label %FINALIZE_SYMTABLE_real_add_subrout
+
+FINALIZE_SYMTABLE_real_add_subrout:               ; preds = %return
   ret void
 }
 
@@ -279,6 +285,9 @@ ifcont12:                                         ; preds = %else11, %then10
   br label %return
 
 return:                                           ; preds = %ifcont12
+  br label %FINALIZE_SYMTABLE_generic_name_01
+
+FINALIZE_SYMTABLE_generic_name_01:                ; preds = %return
   ret i32 0
 }
 

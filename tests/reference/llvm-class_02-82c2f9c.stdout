@@ -28,6 +28,9 @@ define float @__module_class_circle2_circle_area(%circle* %this) {
   br label %return
 
 return:                                           ; preds = %.entry
+  br label %FINALIZE_SYMTABLE_circle_area
+
+FINALIZE_SYMTABLE_circle_area:                    ; preds = %return
   %4 = load float, float* %circle_area, align 4
   ret float %4
 }
@@ -63,6 +66,9 @@ define void @__module_class_circle2_circle_print(%circle* %this) {
   br label %return
 
 return:                                           ; preds = %.entry
+  br label %FINALIZE_SYMTABLE_circle_print
+
+FINALIZE_SYMTABLE_circle_print:                   ; preds = %return
   ret void
 }
 
@@ -80,6 +86,9 @@ define void @__module_class_circle2__xx_lcompilers_changed_main_xx() {
   br label %return
 
 return:                                           ; preds = %.entry
+  br label %FINALIZE_SYMTABLE_main
+
+FINALIZE_SYMTABLE_main:                           ; preds = %return
   ret void
 }
 
@@ -138,6 +147,9 @@ define i32 @main(i32 %0, i8** %1) {
   br label %return
 
 return:                                           ; preds = %.entry
+  br label %FINALIZE_SYMTABLE_circle_test
+
+FINALIZE_SYMTABLE_circle_test:                    ; preds = %return
   ret i32 0
 }
 

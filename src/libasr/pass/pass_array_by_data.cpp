@@ -422,9 +422,11 @@ class EditProcedureReplacer: public ASR::BaseExprReplacer<EditProcedureReplacer>
             ASR::Array_t* arr = ASR::down_cast<ASR::Array_t>(ASRUtils::type_get_past_pointer(
                   ASRUtils::type_get_past_allocatable(x->m_type)));
             if (ASRUtils::is_dimension_empty(arr->m_dims, arr->n_dims) && !(x->m_old == ASR::array_physical_typeType::AssumedRankArray)) {
-              arr->m_dims = ASR::down_cast<ASR::Array_t>(
-                  ASRUtils::type_get_past_allocatable(ASRUtils::type_get_past_pointer(
-                      ASRUtils::expr_type(x->m_arg))))->m_dims;
+                ASR::Array_t* src_arr = ASR::down_cast<ASR::Array_t>(
+                    ASRUtils::type_get_past_allocatable(ASRUtils::type_get_past_pointer(
+                        ASRUtils::expr_type(x->m_arg))));
+                arr->m_dims = ASRUtils::duplicate_dimensions(v.al, src_arr->m_dims, src_arr->n_dims);
+                arr->n_dims = src_arr->n_dims;
             }
         }
     }
@@ -580,6 +582,15 @@ class EditProcedureCallsVisitor : public ASR::ASRPassBaseWalkVisitor<EditProcedu
             ASR::ttype_t* array_type = ASRUtils::expr_type(array);
             ASR::dimension_t* compile_time_dims = nullptr;
             int n_dims = ASRUtils::extract_dimensions_from_ttype(array_type, compile_time_dims);
+            if( n_dims == 0 ) {
+                ASR::ttype_t* scalar_type = ASRUtils::type_get_past_allocatable_pointer(array_type);
+                if( scalar_type && ASR::is_a<ASR::String_t>(*scalar_type) ) {
+                    ASRUtils::ASRBuilder builder(al, array->base.loc);
+                    ASR::expr_t* length = builder.StringLen(array);
+                    dims.push_back(al, length);
+                    return;
+                }
+            }
             for( int i = 0; i < n_dims; i++ ) {
                 ASR::expr_t* length = compile_time_dims[i].m_length;
                 if( length == nullptr ) {
